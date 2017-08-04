@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>WebAssembly</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="perf-tests.css">
+  </head>
+  <body>
+    <script src="http://code.jquery.com/jquery-3.2.1.min.js"
+            integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+            crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.4.2/knockout-min.js"></script>
+    <script src="perf-tests-wasm.js"></script>
+    <script src="perf-tests.js"></script>
+    <h1>Javascript vs wasm -suorituskykyvertailu</h1>
+    <table>
+        <tr>
+            <th>
+            </th>
+            <th>
+                js-toteutus
+            </th>
+            <th>
+                C-toteutus ajettuna WebAssemblyllä
+            </th>
+            <th>
+                C-toteutus ajettuna WebAssemblyllä, js-wrapping mukana*
+            </th>
+        </tr>
+        <tr>
+            <td>
+                string_concat
+            </td>
+            <td data-bind="text: string_concat_time_js"></td>                
+            <td data-bind="text: string_concat_time_c"></td>
+            <td data-bind="text: string_concat_time_c_js"></td>
+        </tr>
+        <tr>
+            <td>
+                traverse_array
+            </td>
+            <td data-bind="text: traverse_array_time_js"></td>                
+            <td data-bind="text: traverse_array_time_c"></td>
+            <td data-bind="text: traverse_array_time_c_js"></td>
+        </tr>
+    </table>
+    <p>
+        * Paras keino ajaa WebAssembly-koodia tällä hetkellä on käyttää javascript-APIn funktiota Module.ccall(). Tässä sarakkeessa oleva aika on mitattu js-koodissa, eli se sisältää C:ssä mitatun ajan + Module.ccall()-kutsuun kuluneen ajan.
+    </p>
+    <h1>Koodit</h1>
+    <h2>string_concat.js</h2>
+    <pre><code>
+    var t0 = performance.now();
+    
+    var arrayLength = 20000;
+    var results = new Array(arrayLength);
+    
+    for (var i = 1; i <= arrayLength; i++) {            
+        var s1 = "string" + i;
+        var s2 = "concatenation" + i;
+        var s3 = "operation" + i;       
+
+        var result = s1 + s2 + s3 + i;
+        results.push(result);
+    }
+    
+    results = 0;
+    
+    var t1 = performance.now();
+    return t1 - t0;
+    </code></pre>
+    <h2>string_concat.c</h2>
+    <pre><code>
+    clock_t begin = clock();
+    
+    int array_length = 20000;
+    const char *array[array_length];
+    
+    for (int i = 1; i <= array_length; i = i + 1) {
+        char *s1;
+        char *s2;
+        char *s3;
+        
+        asprintf(&s1, "string %i", i);
+        asprintf(&s2, "concatenation %i", i);
+        asprintf(&s3, "operation %i", i);
+        
+        char result[STR_SIZE] = {0};
+        snprintf(result, sizeof(result), "%s %s %s", s1, s2, s3);
+        array[i] = result;
+    }
+    
+    free(array);
+    
+    clock_t end = clock();
+    
+    return (double)(end - begin) * 1000 / CLOCKS_PER_SEC;
+    </code></pre>
+    <h2>traverse_array.js</h2>
+    <pre><code>
+    var t0 = performance.now();
+    
+    var sum = 0;
+    var arrayLength = 20000;
+    var array = new Array(arrayLength);
+    
+    for (var i = 0; i < array.length; i++) {            
+        array[i] = i;
+    }
+    
+    for (var i = 0; i < array.length; i++) {
+        for (var j = 0; j < array.length; j++) {
+            sum += array[(i + j) % arrayLength];
+        }
+    }
+    
+    array = 0;
+    
+    var t1 = performance.now();
+    return t1 - t0;
+    </code></pre>
+    <h2>traverse_array.c</h2>
+    <pre><code>
+    clock_t begin = clock();
+    
+    int element = 0;
+    int iteration = 0;
+    int iterations = 0;
+    int innerloop = 0;
+    double sum = 0.0;
+    int array_length = 20000;
+    double *array = (double*)malloc(array_length * sizeof(double));
+
+    for (int i = 0; i < array_length; i++)
+        array[i] = i;
+    for (int i = 0; i < array_length; i++)
+        for (int j = 0; j < array_length; j++)
+            sum += array[(i + j) % array_length];
+
+    free(array);
+    array = NULL;
+    
+    clock_t end = clock();
+    
+    return (double)(end - begin) * 1000 / CLOCKS_PER_SEC;
+    </code></pre>
+  </body>
+</html>

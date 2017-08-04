@@ -1,0 +1,11 @@
+- wasm moduulin lataamisen jälkeen ajetaan funktiot
+- otetaan suoritusajat talteen
+  - c-kooodi mitataan sekä js-puolella että c:ssä (return value)
+  - js-koodi mitataan: var t0 = performance.now();
+                       doSomething();
+                       var t1 = performance.now();
+                       var time_spent_ms = t1 - t0;
+  - c-koodi mitataan:  clock_t begin = clock();
+                       doSomething();
+                       clock_t end = clock();
+                       double time_spent_ms = (double)(end - begin) * 1000 / CLOCKS_PER_SEC;
